@@ -3,6 +3,7 @@ import { useUser } from '@clerk/clerk-react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { supabase } from '../lib/supabase';
 import { ayrshareApi } from '../lib/ayrshare';
+import { useUserProfile } from '../hooks/useUserProfile';
 import { Plus, Share2, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 
 interface Post {
@@ -24,6 +25,7 @@ const platformOptions = [
 
 export default function PostsPage() {
   const { user } = useUser();
+  const { profile } = useUserProfile();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -34,19 +36,12 @@ export default function PostsPage() {
   });
 
   const fetchPosts = async () => {
-    if (!user) return;
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('clerk_user_id', user.id)
-        .maybeSingle();
-
-      if (!profile) {
-        setLoading(false);
-        return;
-      }
 
       const { data, error } = await supabase
         .from('social_posts')
@@ -65,21 +60,14 @@ export default function PostsPage() {
 
   useEffect(() => {
     fetchPosts();
-  }, [user]);
+  }, [profile]);
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || formData.platforms.length === 0) return;
+    if (!profile || formData.platforms.length === 0) return;
 
     setPosting(true);
     try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('clerk_user_id', user.id)
-        .maybeSingle();
-
-      if (!profile) return;
 
       const ayrshareResponse = await ayrshareApi.createPost({
         post: formData.content,

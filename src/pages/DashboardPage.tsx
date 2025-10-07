@@ -3,6 +3,7 @@ import { useUser } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { supabase } from '../lib/supabase';
+import { useUserProfile } from '../hooks/useUserProfile';
 import { FileVideo, Share2, TrendingUp, Plus } from 'lucide-react';
 
 interface Stats {
@@ -13,24 +14,18 @@ interface Stats {
 
 export default function DashboardPage() {
   const { user } = useUser();
+  const { profile } = useUserProfile();
   const [stats, setStats] = useState<Stats>({ totalClips: 0, totalPosts: 0, recentActivity: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user) return;
+      if (!profile) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('clerk_user_id', user.id)
-          .maybeSingle();
-
-        if (!profile) {
-          setLoading(false);
-          return;
-        }
 
         const [clipsResult, postsResult] = await Promise.all([
           supabase
@@ -56,7 +51,7 @@ export default function DashboardPage() {
     };
 
     fetchStats();
-  }, [user]);
+  }, [profile]);
 
   return (
     <DashboardLayout>

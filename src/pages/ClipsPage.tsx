@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { supabase } from '../lib/supabase';
+import { useUserProfile } from '../hooks/useUserProfile';
 import { Plus, FileVideo, Trash2, ExternalLink } from 'lucide-react';
 
 interface Clip {
@@ -16,6 +17,7 @@ interface Clip {
 
 export default function ClipsPage() {
   const { user } = useUser();
+  const { profile } = useUserProfile();
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -26,19 +28,12 @@ export default function ClipsPage() {
   });
 
   const fetchClips = async () => {
-    if (!user) return;
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('clerk_user_id', user.id)
-        .maybeSingle();
-
-      if (!profile) {
-        setLoading(false);
-        return;
-      }
 
       const { data, error } = await supabase
         .from('content_clips')
@@ -57,20 +52,13 @@ export default function ClipsPage() {
 
   useEffect(() => {
     fetchClips();
-  }, [user]);
+  }, [profile]);
 
   const handleCreateClip = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!profile) return;
 
     try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('clerk_user_id', user.id)
-        .maybeSingle();
-
-      if (!profile) return;
 
       const { error } = await supabase.from('content_clips').insert({
         user_id: profile.id,
